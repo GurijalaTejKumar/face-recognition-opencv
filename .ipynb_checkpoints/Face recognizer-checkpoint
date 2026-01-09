@@ -1,0 +1,301 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "053ca841-132d-4e8c-8d46-cf75cd34926c",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#1. Generate daataset\n",
+    "#2. Train the classifier and save it\n",
+    "#3. Detect the face and named it if it is already stored in our dataset"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "df31962f-a4a8-4fab-835a-73aedcebe09d",
+   "metadata": {},
+   "source": [
+    "# Generate dataset"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "97fd924f-8100-4b30-a7f2-326a54a5bfc0",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import cv2"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "0b42692b-4f64-4503-be50-ef1c19010098",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "<>:9: SyntaxWarning: \"is\" with 'tuple' literal. Did you mean \"==\"?\n",
+      "<>:9: SyntaxWarning: \"is\" with 'tuple' literal. Did you mean \"==\"?\n",
+      "C:\\Users\\gurij\\AppData\\Local\\Temp\\ipykernel_17872\\1103720390.py:9: SyntaxWarning: \"is\" with 'tuple' literal. Did you mean \"==\"?\n",
+      "  if faces is():\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Collecting samples is completed.......\n"
+     ]
+    }
+   ],
+   "source": [
+    "def generate_dataset():\n",
+    "    face_classifier = cv2.CascadeClassifier(\"haarcascade_frontalface_default.xml\")\n",
+    "    def face_cropped(img):\n",
+    "        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)\n",
+    "        faces = face_classifier.detectMultiScale(gray,1.3,5)\n",
+    "        #scsaling factor=1.3\n",
+    "        #Minimum neighbour = 5\n",
+    "\n",
+    "        if faces is():\n",
+    "            return None\n",
+    "        for(x,y,w,h) in faces:\n",
+    "            cropped_face=img[y:y+h,x:x+w]\n",
+    "        return cropped_face\n",
+    "        \n",
+    "    cap = cv2.VideoCapture(0)\n",
+    "    id=2\n",
+    "    img_id=0\n",
+    "\n",
+    "    while True:\n",
+    "        ret,frame = cap.read()\n",
+    "        if face_cropped(frame) is not None:\n",
+    "            img_id+=1\n",
+    "            face = cv2.resize(face_cropped(frame),(200,200))\n",
+    "            face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)\n",
+    "            file_name_path = \"data/user.\"+str(id)+\".\"+str(img_id)+\".jpg\"\n",
+    "            cv2.imwrite(file_name_path,face)\n",
+    "            cv2.putText(face,str(img_id),(50,50),cv2.FONT_HERSHEY_COMPLEX,1, (0,255,0),2)\n",
+    "            # (50,50) is the origin point from where text is to be written\n",
+    "            #font scale=1\n",
+    "            #thickness=2\n",
+    "\n",
+    "            cv2.imshow(\"Cropped face\",face)\n",
+    "            if cv2.waitKey(1)==13 or int(img_id)==200:\n",
+    "                break\n",
+    "    cap.release()\n",
+    "    cv2.destroyAllWindows()\n",
+    "    print(\"Collecting samples is completed.......\")\n",
+    "generate_dataset()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "61439144-a0d0-4c44-b4ba-e07ae80bfec0",
+   "metadata": {},
+   "source": [
+    "# Train the classsifier and save it"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "ef7adf8d-2952-4d4a-b878-d5840bfc8102",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "from PIL import Image\n",
+    "import os\n",
+    "import cv2"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "d2244067-af5b-47b0-8c88-5d8bfc9c15f1",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def train_classifier(data_dir):\n",
+    "    path = [os.path.join(data_dir,f) for f in os.listdir(data_dir)]\n",
+    "    faces = []\n",
+    "    ids = []\n",
+    "\n",
+    "    for  image in path:\n",
+    "        img = Image.open(image).convert('L');\n",
+    "        imageNp= np.array(img, 'uint8')\n",
+    "        id = int(os.path.split(image)[1].split(\".\")[1])\n",
+    "\n",
+    "        faces.append(imageNp)\n",
+    "        ids.append(id)\n",
+    "    ids = np.array(ids)\n",
+    "\n",
+    "    #Train the classifier and save\n",
+    "    clf = cv2.face.LBPHFaceRecognizer_create()\n",
+    "    clf.train(faces,ids)\n",
+    "    clf.write(\"classifier.xml\")\n",
+    "train_classifier(\"data\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "58019ba9-1cdf-4df0-b705-aa6913494622",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "4.11.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "import cv2\n",
+    "print(cv2.__version__)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "480200b4-79bd-45e0-90ef-84d47ff4aec0",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "True\n"
+     ]
+    }
+   ],
+   "source": [
+    "import cv2\n",
+    "print(hasattr(cv2, \"face\"))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "491d86dd-f1f0-45a6-ae72-5a5ca087ced4",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import cv2\n",
+    "recognizer = cv2.face.LBPHFaceRecognizer_create()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "82eed2c6-93e0-45c2-85f9-71e82d2f07d8",
+   "metadata": {},
+   "source": [
+    "# Detect the face and named it if it is already stored in our dataset"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "6739c2d8-a661-43cc-b155-f0d61d6b3191",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import cv2\n",
+    "import numpy as np\n",
+    "from PIL import Image\n",
+    "import os"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "a7332e5d-75b8-4ebf-96c4-c171ed72c781",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def draw_boundary(img,classifier,scaleFactor,minNeighbors,color,text,clf):\n",
+    "    gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)\n",
+    "    features = classifier.detectMultiScale(gray_image,scaleFactor,minNeighbors)\n",
+    "\n",
+    "    coords = []\n",
+    "\n",
+    "    for(x,y,w,h) in features:\n",
+    "        cv2.rectangle(img,(x,y),(x+w,y+h),color,2)\n",
+    "        id,pred = clf.predict(gray_image[y:y+h,x:x+w])\n",
+    "        confidence = int(100*(1-pred/300))\n",
+    "\n",
+    "        if confidence>35:\n",
+    "            if id==1:\n",
+    "                cv2.putText(img,\"TEJKUMAR\",(x,y-5),cv2.FONT_HERSHEY_SIMPLEX,0.8,color,1,cv2.LINE_AA)\n",
+    "            if id==2:\n",
+    "                cv2.putText(img,\"HEMANTH\",(x,y-5),cv2.FONT_HERSHEY_SIMPLEX,0.8,color,1,cv2.LINE_AA)\n",
+    "            else:\n",
+    "                cv2.putText(img,\"UNKNOWN\",(x,y-5),cv2.FONT_HERSHEY_SIMPLEX,0.8,(0,0,225),1,cv2.LINE_AA)\n",
+    "\n",
+    "            coords=[x,y,w,h]\n",
+    "        return coords\n",
+    "\n",
+    "def recognize(img,clf,faceCascade):\n",
+    "    coords = draw_boundary(img,faceCascade,1.1,10,(255,255,255),\"Face\",clf)\n",
+    "    return img\n",
+    "\n",
+    "faceCascade=cv2.CascadeClassifier(\"haarcascade_frontalface_default.xml\")\n",
+    "clf = cv2.face.LBPHFaceRecognizer_create()\n",
+    "clf.read(\"classifier.xml\")\n",
+    "\n",
+    "video_capture = cv2.VideoCapture(0)\n",
+    "\n",
+    "while True:\n",
+    "    ret,img = video_capture.read()\n",
+    "    img = recognize(img,clf,faceCascade)\n",
+    "    cv2.imshow(\"face detection\",img)\n",
+    "\n",
+    "    if cv2.waitKey(1)==13:\n",
+    "        break\n",
+    "\n",
+    "video_capture.release()\n",
+    "cv2.destroyAllWindows()\n",
+    "\n",
+    "# crop face, convert it to gray iamge ---> classifier\n",
+    "# to draw rectangle, i have to give my real image that comes from my webcam"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4f0754d5-b575-4a30-b086-175dac8a899d",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.13.2"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
